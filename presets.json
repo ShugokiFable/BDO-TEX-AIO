@@ -1,0 +1,50 @@
+{
+  "playtest": {
+    "label": "Playtest (recommended first)",
+    "description": "Best balance of quality, time, VRAM. Use this for the first full inject and walk around in-game.",
+    "target": 1024,
+    "minSize": 128,
+    "maxOutput": 2048,
+    "model": "high-fidelity-4x"
+  },
+  "quality": {
+    "label": "Quality / 1440p-4K pop",
+    "description": "Heavier world detail. Use after playtest looks good and you want more sharpness up close.",
+    "target": 2048,
+    "minSize": 128,
+    "maxOutput": 2048,
+    "model": "high-fidelity-4x"
+  },
+  "balanced": {
+    "label": "Balanced (softer sharpen)",
+    "description": "Same 1024 target as playtest but ultramix model \u2014 less harsh than ultrasharp on noisy materials.",
+    "target": 1024,
+    "minSize": 128,
+    "maxOutput": 2048,
+    "model": "ultramix-balanced-4x"
+  },
+  "legacy1440": {
+    "label": "Long edge 1440",
+    "description": "Odd size (not 1024/2048). Kept if you already scanned with target 1440 and want consistency.",
+    "target": 1440,
+    "minSize": 128,
+    "maxOutput": 4096,
+    "model": "high-fidelity-4x"
+  },
+  "sharp": {
+    "label": "Max sharp (experimental)",
+    "description": "Ultrasharp at 1024 \u2014 can look crispy or noisy. Prefer high-fidelity for world albedos.",
+    "target": 1024,
+    "minSize": 128,
+    "maxOutput": 2048,
+    "model": "ultrasharp-4x"
+  },
+  "fast": {
+    "label": "Fast (lite model)",
+    "description": "upscayl-lite at 1024. Measured ~2.6x faster than high-fidelity with visibly softer detail. Good for a first full-world pass.",
+    "target": 1024,
+    "minSize": 128,
+    "maxOutput": 2048,
+    "model": "upscayl-lite-4x"
+  }
+}

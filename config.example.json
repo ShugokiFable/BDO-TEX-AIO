@@ -1,0 +1,32 @@
+{
+  "gameDir": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\Black Desert Online",
+  "workDir": "work",
+  "upscaylBin": "C:\\Program Files\\Upscayl\\resources\\bin\\upscayl-bin.exe",
+  "upscaylModels": "C:\\Program Files\\Upscayl\\resources\\models",
+  "activePreset": "playtest",
+  "model": "high-fidelity-4x",
+  "target": 1024,
+  "minSize": 128,
+  "maxOutput": 2048,
+  "roots": [
+    "object/texture/",
+    "speedtreedata/texture/",
+    "texture/terraindetailmap/"
+  ],
+  "workers": 0,
+  "upscaleBatch": 256,
+  "upscaylGpu": "0",
+  "upscaylTile": 0,
+  "upscaylThreads": "2:4:2",
+  "includeLodBillboards": false,
+  "materialsEnabled": true,
+  "materialsCompanionKinds": [
+    "n",
+    "sp",
+    "m",
+    "p",
+    "w",
+    "ao"
+  ],
+  "bdoAioFilesToPatch": ""
+}

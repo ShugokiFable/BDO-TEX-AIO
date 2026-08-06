@@ -1,0 +1,8 @@
+config.json
+__pycache__/
+*.pyc
+work/
+export/
+*.log
+.DS_Store
+Thumbs.db
