@@ -35,10 +35,18 @@ BDO-AIO territory, so this tool stays out unless you say otherwise. Press
 for a GPT / external upscaler pass:
 
 ```text
-[G] player mode on  ->  [1] scan  ->  [2] extract  ->  [A] export to work\04_swarm_in
-     -> GPT upscales the PNGs (keep filenames) -> results into work\05_swarm_out
-     -> [B] pack --source gpt  ->  [6] stage  ->  Meta Injector
+[G] player mode on  ->  [1] scan  ->  [2] extract  ->  [A] export -> work\04_swarm_in + gpt-export.zip
+     -> send work\gpt-export.zip to GPT / Codex (prompt: "upscale/enhance each PNG,
+        keep filenames AND folder structure, return a zip")
+     -> drop the returned zip anywhere, [B] prompts for its path
+     -> [6] stage  ->  Meta Injector
 ```
+
+- Zip round-trip: `[A]` also writes `work\gpt-export.zip`; `[B]` accepts the
+  returned zip (`pack --source gpt --zip <file>`, zip-slip guarded) or
+  Enter to keep the old folder flow (`work\05_swarm_out`).
+- `texconv.exe` ships in `tools\` — pack uses bundled `dds.py`, texconv is
+  there as an alternative for companion-map encoding if you configure it.
 
 - Stage still skips any path BDO-AIO / BodyMats already claimed — AIO wins.
 - Every GPT result is blank-checked before packing; all-black outputs are
@@ -155,6 +163,8 @@ lands in the 1.4–2.2 img/s band on this GPU.
 |-----|--------|
 | `1`–`6` | Scan → extract → upscale → companions → pack → stage |
 | `7` | Full pipeline |
+| `A` | Export PNGs + `gpt-export.zip` for GPT / Codex / SwarmUI / ComfyUI |
+| `B` | Pack from returned GPT zip (prompts for path; Enter = swarm folder) |
 | `C` | Toggle character/texture (NPC/monster; not player classes) |
 | `G` | Toggle player/GPT textures (playable `p*`; opt-in) |
 | `X` | Toggle bodies (enhance BDO-AIO choices; **OFF** default) |

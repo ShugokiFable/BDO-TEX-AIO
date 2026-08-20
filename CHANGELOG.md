@@ -3,6 +3,18 @@
 All notable changes to BDO-TEX-AIO. Format: Keep a Changelog, versions
 semantic. Release zips on GitHub always match the tagged commit.
 
+## [1.5.1] - 2026-08-19
+
+### Added
+- **GPT / Codex zip round-trip**: `[A]` export also writes `work\gpt-export.zip`;
+  `[B]` accepts the returned zip (`pack --source gpt --zip <file>`) with a
+  zip-slip guard, or Enter to keep the folder flow. `swarm-export --zip` /
+  `gpt --zip` flags added.
+
+### Changed
+- `tools\texconv.exe` now tracked in the repo (was untracked) — ships in the
+  release zip; pack still uses bundled `dds.py` by default.
+
 ## [1.5.0] - 2026-08-19
 
 ### Added

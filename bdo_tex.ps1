@@ -238,8 +238,8 @@ function Show-Menu {
     Write-Host ''
     Write-Host '  [7] Run 1-6 in one go' -ForegroundColor Green
     Write-Host ''
-    Write-Host '  [A] Advanced: export for GPT / SwarmUI / ComfyUI'
-    Write-Host '  [B] Advanced: pack from GPT / Swarm output'
+    Write-Host '  [A] Advanced: export PNGs + zip for GPT / Codex / SwarmUI / ComfyUI'
+    Write-Host '  [B] Advanced: pack from returned GPT zip (or swarm folder)'
     Write-Host ''
     Write-Host '  [P] Quality presets           (playtest, quality, balanced, ...)' -ForegroundColor Yellow
     Write-Host '  [T] Target size only         (1024, 1440, 2048, or custom)'
@@ -443,8 +443,15 @@ while ($true) {
         '5' { Invoke-Cli @('pack') }
         '6' { Invoke-Cli @('stage') }
         '7' { Invoke-Full }
-        'A' { Invoke-Cli @('swarm-export') }
-        'B' { Invoke-Cli @('pack', '--source', 'swarm') }
+        'A' { Invoke-Cli @('swarm-export', '--zip') }
+        'B' {
+            $zip = Read-Host '  Returned GPT zip path (Enter = use 05_swarm_out folder)'
+            if ($zip -and (Test-Path $zip)) {
+                Invoke-Cli @('pack', '--source', 'gpt', '--zip', $zip)
+            } else {
+                Invoke-Cli @('pack', '--source', 'swarm')
+            }
+        }
         'P' { Show-PresetMenu }
         'T' { Set-Target }
         'M' { Set-Model }

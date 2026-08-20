@@ -906,6 +906,16 @@ def cmd_swarm_export(cfg: dict, args) -> int:
             shutil.copy2(src, dest_dir / e["flat"])
             n += 1
     log(f"Copied {n:,} PNGs to {dest_dir}")
+    if getattr(args, "zip", False):
+        import zipfile
+        zf = dest_dir.parent / "gpt-export.zip"
+        with zipfile.ZipFile(zf, "w", zipfile.ZIP_DEFLATED) as z:
+            for png in sorted(dest_dir.rglob("*.png")):
+                z.write(png, png.relative_to(dest_dir).as_posix())
+        log(f"ZIP ready: {zf} ({zf.stat().st_size/2**20:.1f} MB)")
+        log("Send gpt-export.zip to GPT/Codex with:")
+        log("  'Upscale/enhance each PNG, keep filenames AND folder structure, return a zip'")
+        log(f"Then drop the returned zip and run: bdo_tex.py pack --source gpt --zip <file>")
     log("Run your GPT / SwarmUI / ComfyUI batch with that folder as input and")
     log(f"write the results (same filenames) to {work(cfg, 'swarm_out')}")
     log("Then:  bdo_tex.py pack --source gpt   (or --source swarm)")
@@ -1060,6 +1070,22 @@ def cmd_pack(cfg: dict, args) -> int:
     man = dict(man)
     man["entries"] = entries
     src_dir = work(cfg, "swarm_out" if args.source in ("swarm", "gpt") else "upscaled")
+    if getattr(args, "zip", None):
+        import zipfile
+        out = work(cfg, "swarm_out")
+        out.mkdir(parents=True, exist_ok=True)
+        n = 0
+        with zipfile.ZipFile(args.zip) as z:
+            for name in z.namelist():
+                if not name.endswith(".png"):
+                    continue
+                target = (out / name).resolve()
+                if not target.is_relative_to(out.resolve()):  # zip-slip guard
+                    continue
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(z.read(name))
+                n += 1
+        log(f"Unzipped {n:,} PNGs from {args.zip} -> {out}")
     mat_dir = work(cfg, "materials")
     out_dir = work(cfg, "packed")
     paz.assert_safe_out(out_dir, cfg["gameDir"])
@@ -1414,15 +1440,20 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("swarm-export", help="copy PNGs out for a GPT / SwarmUI / ComfyUI pass")
     p.add_argument("--limit", type=int, default=0)
+    p.add_argument("--zip", action="store_true",
+                   help="also write work/gpt-export.zip to send to GPT/Codex")
     p.set_defaults(fn=cmd_swarm_export)
 
     p = sub.add_parser("gpt", help="alias for swarm-export: hand PNGs to GPT for upscaling")
     p.add_argument("--limit", type=int, default=0)
+    p.add_argument("--zip", action="store_true")
     p.set_defaults(fn=cmd_swarm_export)
 
     p = sub.add_parser("pack", help="PNG -> DDS with mip chain (albedo + materials)")
     p.add_argument("--source", choices=["upscayl", "swarm", "gpt"], default="upscayl",
                    help="upscayl, or an external pass (gpt/swarm output PNGs)")
+    p.add_argument("--zip", type=Path, default=None,
+                   help="returned GPT zip to unpack into swarm_out before packing")
     p.set_defaults(fn=cmd_pack)
 
     p = sub.add_parser("stage", help="copy into files_to_patch for Meta Injector")
