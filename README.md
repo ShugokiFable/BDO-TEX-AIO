@@ -2,8 +2,8 @@
 
 AI upscaling for Black Desert Online **world** textures — landscape, buildings,
 props, NPCs, monsters, mounts (optional). Stages results for Meta Injector.
-
-Double-click **`START.bat`**.
+An opt-in mode (`[G]`) adds **playable-class (player)** textures for a GPT /
+external upscaler pass. Double-click **`START.bat`**.
 
 ## Relationship to BDO-AIO (choices always win)
 
@@ -15,7 +15,8 @@ Double-click **`START.bat`**.
 
 This tool:
 
-- **Never** includes playable-class `character/texture/p*` assets  
+- **Never** includes playable-class `character/texture/p*` assets unless you
+  opt in (`[G]` / `includePlayerTextures` — for a GPT/texconv pass)  
 - **By default** skips LODs / SpeedTree **billboards** / impostors  
   (optional high toggle `[L]` / `includeLodBillboards`)  
 
@@ -24,7 +25,27 @@ This tool:
 - Writes only `files_to_patch\_bdo_tex_upscale\`
 
 So after you pick bodies in BDO-AIO, TEX will not stomp those choices. Paths AIO
-(or BodyMats) already staged are **skipped** at stage time.
+(or BodyMats) already staged are **skipped** at stage time — even in player mode.
+
+## GPT / player-texture mode (opt-in)
+
+World textures are the default. Playable-class `character/texture/p*` is
+BDO-AIO territory, so this tool stays out unless you say otherwise. Press
+`[G]` (or set `includePlayerTextures: true` in config) to opt them back in
+for a GPT / external upscaler pass:
+
+```text
+[G] player mode on  ->  [1] scan  ->  [2] extract  ->  [A] export to work\04_swarm_in
+     -> GPT upscales the PNGs (keep filenames) -> results into work\05_swarm_out
+     -> [B] pack --source gpt  ->  [6] stage  ->  Meta Injector
+```
+
+- Stage still skips any path BDO-AIO / BodyMats already claimed — AIO wins.
+- Every GPT result is blank-checked before packing; all-black outputs are
+  skipped, never shipped (same guard that caught Upscayl's silent blanks).
+- Output format follows each texture's own header (DXT1/DXT5, full mips) —
+  no manual format matching; the GPT PNG just needs to be ≥ the source size.
+- Same folder flow works with SwarmUI / ComfyUI (`swarm-export`, `--source swarm`).
 
 ## Recommended run order
 
@@ -49,7 +70,7 @@ pad00000.meta -> scan -> extract -> upscale -> companions(match) -> pack -> stag
 |------|------|
 | Scan | Eligible colour textures under configured roots |
 | Extract | PAZ → PNG (mip 0) |
-| Upscale | Upscayl on **RGB only**, alpha re-attached after; every output blank-checked |
+| Upscale | Upscayl on **RGB only**, alpha re-attached after; every output blank-checked. Or **GPT mode**: export → your own GPT batch → `pack --source gpt` |
 | Companions | Resize **existing** `_n`/`_sp`/… that already exist in the archive |
 | Pack | DDS + full mips |
 | Stage | Only unclaimed world paths → `_bdo_tex_upscale` |
@@ -104,7 +125,7 @@ lands in the 1.4–2.2 img/s band on this GPU.
 ## Defaults
 
 - **Roots:** world only (`object/texture`, trees, terrain detail)  
-- **Character textures:** OFF (menu `[C]` to enable NPC/monster; player `p*` still excluded)  
+- **Character textures:** OFF (menu `[C]` to enable NPC/monster; player `p*` opt-in via `[G]`)  
 - **Target:** use menu `[P]` presets (playtest 1024, quality 2048, …)
 
 ## Menu
@@ -114,6 +135,7 @@ lands in the 1.4–2.2 img/s band on this GPU.
 | `1`–`6` | Scan → extract → upscale → companions → pack → stage |
 | `7` | Full pipeline |
 | `C` | Toggle character/texture (NPC/monster; not player classes) |
+| `G` | Toggle player/GPT textures (playable `p*`; opt-in) |
 | `L` | Toggle LOD/billboards (**OFF** default; high option, low ROI) |
 | `N` | Toggle companion-map matching |
 | `P` / `T` / `M` | Preset / target / model |
@@ -124,7 +146,7 @@ lands in the 1.4–2.2 img/s band on this GPU.
 - Python 3 + Pillow + numpy  
 - Upscayl (CLI inside the install)  
 - Meta Injector to apply `files_to_patch`  
-- Optional: SwarmUI/ComfyUI for advanced path  
+- Optional: GPT / SwarmUI / ComfyUI for the external-upscaler path  
 
 ```bat
 pip install pillow numpy
@@ -141,7 +163,7 @@ Black Desert install. Keep `workDir` as `"work"` (stays next to the app).
 
 | Rule | Enforced how |
 |------|----------------|
-| No player-class textures | `texfilter` playable-class prefix block |
+| No player-class textures unless `[G]` opt-in | `texfilter` playable-class block + `includePlayerTextures` |
 | AIO paths not overwritten | Stage skips any path owned by another layer |
 | No invent materials | Companions = archive siblings only |
 | Isolated work | All caches under app `work\` |

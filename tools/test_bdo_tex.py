@@ -248,6 +248,57 @@ def test_safe_upscayl_defaults() -> None:
     assert presets["fast"]["model"] == "upscayl-lite-4x"
 
 
+def test_player_classes_opt_in_when_asked() -> None:
+    """[G] GPT/player mode flips p* eligibility; default stays hard-blocked."""
+    for prefix in tf.KNOWN_PLAYER_PREFIXES:
+        path = f"character/texture/{prefix}_00_ub_0001.dds"
+        ok, reason = tf.classify(path, include_player_textures=True)
+        assert ok, f"{path} must be eligible in opt-in mode, got {reason}"
+        assert "player-opt-in" in reason, reason
+    # a class prefix invented by a future patch is also eligible when asked
+    ok2, reason2 = tf.classify(
+        "character/texture/pzzz_00_ub_0001.dds", include_player_textures=True
+    )
+    assert ok2, reason2
+    # and is_eligible passes the flag through
+    assert tf.is_eligible(
+        "character/texture/phw_00_nude_0001.dds", include_player_textures=True
+    )
+
+
+def test_pack_blank_guard_skips_all_black() -> None:
+    """A GPT/Swarm output that is fully black must never reach the game."""
+    import json as _json
+    from PIL import Image
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        cfg = dict(bdo_tex.DEFAULTS)
+        cfg["workDir"] = str(tmp / "work")
+        cfg["roots"] = ["character/texture/"]
+        wd = tmp / "work"
+        (wd / "logs").mkdir(parents=True)
+        (wd / "05_swarm_out").mkdir(parents=True)
+        (wd / "06_packed_dds").mkdir(parents=True)
+        man = {"entries": [
+            {"path": "character/texture/pbw_00_ub_0001.dds",
+             "flat": "character@texture@pbw_00_ub_0001.png",
+             "fourcc": "DXT1", "out": [2048, 2048]},
+        ]}
+        (wd / "logs" / "manifest.json").write_text(_json.dumps(man), encoding="utf-8")
+        black = wd / "05_swarm_out" / "character@texture@pbw_00_ub_0001.png"
+        Image.new("RGB", (2048, 2048), (0, 0, 0)).save(black)
+
+        class A:
+            source = "gpt"
+        assert bdo_tex.cmd_pack(cfg, A()) == 0
+        packed = list((wd / "06_packed_dds").glob("*.dds"))
+        assert packed == [], f"blank output must not be packed: {packed}"
+        # a healthy image of the same entry packs fine (guard is per-image)
+        Image.new("RGB", (2048, 2048), (40, 80, 120)).save(black)
+        assert bdo_tex.cmd_pack(cfg, A()) == 0
+        assert len(list((wd / "06_packed_dds").glob("*.dds"))) == 1
+
+
 def main() -> int:
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for t in tests:

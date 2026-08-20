@@ -13,7 +13,7 @@ param()
 $ErrorActionPreference = 'Stop'
 $AppRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Cli     = Join-Path $AppRoot 'tools\bdo_tex.py'
-$Version = '1.3.0'
+$Version = '1.4.0'
 
 function Resolve-Python {
     foreach ($c in @('python', 'py')) {
@@ -192,7 +192,7 @@ function Show-Menu {
     Clear-Host
     Write-Host '==================================================' -ForegroundColor Cyan
     Write-Host ('  BDO Texture AIO  v{0}' -f $Version) -ForegroundColor Cyan
-    Write-Host '  World textures only - BDO-AIO body/pube choices always win' -ForegroundColor DarkGray
+    Write-Host '  World first - player/GPT textures opt-in; BDO-AIO choices always win' -ForegroundColor DarkGray
     Write-Host '==================================================' -ForegroundColor Cyan
     Write-Host ''
     $roots = @($cfg.roots)
@@ -220,6 +220,10 @@ function Show-Menu {
     if ($null -ne $cfg.includeLodBillboards) { $lodOn = [bool]$cfg.includeLodBillboards }
     $lodLabel = if ($lodOn) { 'ON (high option)' } else { 'OFF (default)' }
     Write-Host ('  LOD/billboards: {0}' -f $lodLabel) -ForegroundColor $(if ($lodOn) { 'Yellow' } else { 'DarkGray' })
+    $playerOn = $false
+    if ($null -ne $cfg.includePlayerTextures) { $playerOn = [bool]$cfg.includePlayerTextures }
+    $playerLabel = if ($playerOn) { 'ON (BDO-AIO territory - opt-in)' } else { 'OFF (default)' }
+    Write-Host ('  player/GPT textures: {0}' -f $playerLabel) -ForegroundColor $(if ($playerOn) { 'Yellow' } else { 'DarkGray' })
     Write-Host ''
     Write-Host '  [1] Scan game textures        (build the candidate list)'
     Write-Host '  [2] Extract to PNG'
@@ -230,13 +234,14 @@ function Show-Menu {
     Write-Host ''
     Write-Host '  [7] Run 1-6 in one go' -ForegroundColor Green
     Write-Host ''
-    Write-Host '  [A] Advanced: export for SwarmUI / ComfyUI'
-    Write-Host '  [B] Advanced: pack from SwarmUI output'
+    Write-Host '  [A] Advanced: export for GPT / SwarmUI / ComfyUI'
+    Write-Host '  [B] Advanced: pack from GPT / Swarm output'
     Write-Host ''
     Write-Host '  [P] Quality presets           (playtest, quality, balanced, ...)' -ForegroundColor Yellow
     Write-Host '  [T] Target size only         (1024, 1440, 2048, or custom)'
     Write-Host '  [M] Upscaler model only'
     Write-Host '  [C] Toggle character textures (NPC/monster - OFF by default)' -ForegroundColor Yellow
+    Write-Host '  [G] Toggle player/GPT textures (playable p* - opt-in)' -ForegroundColor Yellow
     Write-Host '  [L] Toggle LOD/billboards     (distance art - OFF by default)' -ForegroundColor Yellow
     Write-Host '  [N] Toggle companion-map matching' -ForegroundColor Yellow
     Write-Host '  [S] Status'
@@ -293,10 +298,26 @@ function Toggle-CharacterRoots {
     } else {
         $list.Insert(0, 'character/texture/')
         Write-Host '  character/texture: ON (NPC/monster/mount skins)' -ForegroundColor Yellow
-        Write-Host '  Playable-class p* prefixes stay excluded always.' -ForegroundColor DarkGray
+        Write-Host '  Playable-class p* stay excluded unless [G] GPT/player mode is on.' -ForegroundColor DarkGray
     }
     $cfg.roots = @($list.ToArray())
     Save-Config $cfg
+    Write-Host '  Re-run [1] Scan so the candidate list matches.' -ForegroundColor Yellow
+}
+
+function Toggle-PlayerTextures {
+    $cfg = Get-Config
+    $cur = $false
+    if ($null -ne $cfg.includePlayerTextures) { $cur = [bool]$cfg.includePlayerTextures }
+    $cfg.includePlayerTextures = -not $cur
+    Save-Config $cfg
+    if ($cfg.includePlayerTextures) {
+        Write-Host '  player/GPT textures: ON (opt-in)' -ForegroundColor Yellow
+        Write-Host '  Playable-class p* can now be scanned for a GPT/texconv pass.' -ForegroundColor DarkGray
+        Write-Host '  BDO-AIO layers still win every path collision at stage time.' -ForegroundColor DarkGray
+    } else {
+        Write-Host '  player/GPT textures: OFF (default)' -ForegroundColor Green
+    }
     Write-Host '  Re-run [1] Scan so the candidate list matches.' -ForegroundColor Yellow
 }
 
@@ -385,6 +406,7 @@ while ($true) {
         'T' { Set-Target }
         'M' { Set-Model }
         'C' { Toggle-CharacterRoots }
+        'G' { Toggle-PlayerTextures }
         'L' { Toggle-LodBillboards }
         'N' { Toggle-Materials }
         'S' { Invoke-Cli @('status') }

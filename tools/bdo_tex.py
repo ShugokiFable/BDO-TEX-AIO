@@ -83,6 +83,10 @@ DEFAULTS = {
     # LOD / SpeedTree billboards: OFF by default (distance art, poor ROI).
     # High option: includeLodBillboards true re-scan required.
     "includeLodBillboards": False,
+    # Player/GPT mode (opt-in): allow playable-class p* textures into the
+    # pipeline for a GPT / external upscaler pass. OFF by default — those
+    # paths are BDO-AIO territory; stage still lets BDO-AIO layers win.
+    "includePlayerTextures": False,
     # Companion maps: ONLY resize maps that already exist in the archive for
     # that albedo. Inventing new _n/_sp/_p does nothing in BDO (shader slots
     # are fixed; no ParallaxGen equivalent). See materials.py docstring.
@@ -292,7 +296,10 @@ def cmd_scan(cfg: dict, args) -> int:
     roots = roots_normalized(cfg)
     char_on = any(r.startswith(texfilter.CHARACTER_ROOT) for r in roots)
     lod_on = bool(cfg.get("includeLodBillboards", False))
+    player_on = bool(cfg.get("includePlayerTextures", False))
     log(f"  roots ({len(roots)}): {', '.join(r.rstrip('/') for r in roots)}")
+    if player_on:
+        log("  player/GPT textures: ON (opt-in - BDO-AIO territory, vanilla p* only)")
     if not char_on:
         log("  character/texture: OFF (default - enable in config or menu [C])")
     log(f"  LOD/billboards: {'ON (high option)' if lod_on else 'OFF (default)'}")
@@ -304,7 +311,8 @@ def cmd_scan(cfg: dict, args) -> int:
             continue
         path = ix.path_of(f)
         eligible, reason = texfilter.classify(
-            path, include_lod_billboards=lod_on
+            path, include_lod_billboards=lod_on,
+            include_player_textures=player_on,
         )
         if eligible and not path_in_roots(path, roots):
             # Distinguish optional character from other disabled roots.
@@ -898,9 +906,9 @@ def cmd_swarm_export(cfg: dict, args) -> int:
             shutil.copy2(src, dest_dir / e["flat"])
             n += 1
     log(f"Copied {n:,} PNGs to {dest_dir}")
-    log("Run your SwarmUI/ComfyUI batch with that folder as input and write the")
-    log(f"results (same filenames) to {work(cfg, 'swarm_out')}")
-    log("Then:  bdo_tex.py pack --source swarm")
+    log("Run your GPT / SwarmUI / ComfyUI batch with that folder as input and")
+    log(f"write the results (same filenames) to {work(cfg, 'swarm_out')}")
+    log("Then:  bdo_tex.py pack --source gpt   (or --source swarm)")
     return 0
 
 
@@ -1031,6 +1039,10 @@ def _pack_one(job: dict) -> str:
     try:
         with Image.open(job["src"]) as im:
             im = im.convert("RGBA")
+            # Blank-output guard: an upscaler (GPT included) can return a fully
+            # black image while "succeeding" — never ship that to the game.
+            if is_blank_rgb(im):
+                return f"blank:{job['src']}"
             if im.size != (job["w"], job["h"]):
                 im = im.resize((job["w"], job["h"]), Image.LANCZOS)
             blob = dds.write(im, job["fourcc"], mipmaps=True)
@@ -1047,7 +1059,7 @@ def cmd_pack(cfg: dict, args) -> int:
         log(f"  ignoring {len(man['entries']) - len(entries):,} outside current roots")
     man = dict(man)
     man["entries"] = entries
-    src_dir = work(cfg, "swarm_out" if args.source == "swarm" else "upscaled")
+    src_dir = work(cfg, "swarm_out" if args.source in ("swarm", "gpt") else "upscaled")
     mat_dir = work(cfg, "materials")
     out_dir = work(cfg, "packed")
     paz.assert_safe_out(out_dir, cfg["gameDir"])
@@ -1100,11 +1112,16 @@ def cmd_pack(cfg: dict, args) -> int:
     t0 = time.time()
     with ProcessPoolExecutor(workers) as pool:
         errs = [r for r in pool.map(_pack_one, jobs, chunksize=8) if r != "ok"]
+    blanks = [e for e in errs if e.startswith("blank:")]
+    errs = [e for e in errs if not e.startswith("blank:")]
+    if blanks:
+        log(f"    SKIPPED {len(blanks):,} blank outputs "
+            f"(blank-output guard - never packed)")
     for e in errs[:10]:
         log(f"    ! {e}")
     total = sum(Path(j["dest"]).stat().st_size for j in jobs if Path(j["dest"]).is_file())
-    log(f"  {len(jobs)-len(errs):,} packed, {len(errs)} failed, "
-        f"{total/2**30:.2f} GB in {time.time()-t0:.0f}s")
+    log(f"  {len(jobs)-len(errs)-len(blanks):,} packed, {len(errs)} failed, "
+        f"{len(blanks)} blank-skipped, {total/2**30:.2f} GB in {time.time()-t0:.0f}s")
     return 0
 
 
@@ -1171,6 +1188,7 @@ def cmd_stage(cfg: dict, args) -> int:
         _elig, why = texfilter.classify(
             game_path,
             include_lod_billboards=bool(cfg.get("includeLodBillboards", False)),
+            include_player_textures=bool(cfg.get("includePlayerTextures", False)),
         )
         if "playable-class" in why:
             player_blocked += 1
@@ -1217,9 +1235,9 @@ def cmd_stage(cfg: dict, args) -> int:
         shutil.copy2(src, dst)
         total += dst.stat().st_size
     (dest_root / "README_BDO_TEX.txt").write_text(
-        "BDO-TEX-AIO world-texture layer\n"
-        "Playable-class and any path already staged by BDO-AIO/BodyMats were skipped.\n"
-        "BDO-AIO owns body/pube/outfit choices; this tool only enhances world/vanilla.\n",
+        "BDO-TEX-AIO texture layer\n"
+        "Paths already staged by BDO-AIO/BodyMats were skipped (they win).\n"
+        "Playable-class textures appear here only in opt-in GPT/player mode.\n",
         encoding="utf-8",
     )
     log(f"  wrote {total/2**30:.2f} GB")
@@ -1300,6 +1318,8 @@ def cmd_status(cfg: dict, args) -> int:
     char_on = any(r.startswith(texfilter.CHARACTER_ROOT) for r in roots)
     log(f"roots: {', '.join(r.rstrip('/') for r in roots)}")
     log(f"character/texture: {'ON' if char_on else 'OFF (default)'}")
+    player_on = bool(cfg.get("includePlayerTextures", False))
+    log(f"player/GPT textures: {'ON (opt-in)' if player_on else 'OFF (default)'}")
     log(f"upscaleBatch: {cfg.get('upscaleBatch', 32)}")
     log(f"upscayl: gpu={cfg.get('upscaylGpu', '0')!s}  "
         f"tile={cfg.get('upscaylTile', 400)}  "
@@ -1392,12 +1412,17 @@ def main(argv: list[str] | None = None) -> int:
                    help="run even if materialsEnabled is false")
     p.set_defaults(fn=cmd_materials)
 
-    p = sub.add_parser("swarm-export", help="copy PNGs out for a SwarmUI/ComfyUI pass")
+    p = sub.add_parser("swarm-export", help="copy PNGs out for a GPT / SwarmUI / ComfyUI pass")
+    p.add_argument("--limit", type=int, default=0)
+    p.set_defaults(fn=cmd_swarm_export)
+
+    p = sub.add_parser("gpt", help="alias for swarm-export: hand PNGs to GPT for upscaling")
     p.add_argument("--limit", type=int, default=0)
     p.set_defaults(fn=cmd_swarm_export)
 
     p = sub.add_parser("pack", help="PNG -> DDS with mip chain (albedo + materials)")
-    p.add_argument("--source", choices=["upscayl", "swarm"], default="upscayl")
+    p.add_argument("--source", choices=["upscayl", "swarm", "gpt"], default="upscayl",
+                   help="upscayl, or an external pass (gpt/swarm output PNGs)")
     p.set_defaults(fn=cmd_pack)
 
     p = sub.add_parser("stage", help="copy into files_to_patch for Meta Injector")

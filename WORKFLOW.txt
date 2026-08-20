@@ -15,9 +15,11 @@ Authority: BDO-AIO owns body / pube / genital / outfit CHOICES.
        (same paths as your choices, better pixels - not different bodies)
 
   3. BDO-TEX-AIO   (optional)
-       World / environment upscale (player classes excluded forever).
+       World / environment upscale.
+       Player-class p* excluded unless GPT/player mode [G] is on (opt-in).
        Stage -> files_to_patch\_bdo_tex_upscale
        Any path already claimed by AIO or BodyMats is SKIPPED.
+       GPT mode: [A] export -> GPT upscale -> [B] pack --source gpt -> [6] stage
 
   4. PartCutGen   (if you use it from BDO-AIO)
 

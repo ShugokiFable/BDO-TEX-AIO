@@ -11,11 +11,14 @@ Two independent safety properties:
      an AI upscaler invents plausible-looking detail that is physically wrong
      in those channels, so they are excluded by suffix.
 
-  2. Nothing a player character wears or is, is eligible. Playable-class assets
-     under character/texture/ are named with a class prefix (phw, pew, pkww,
-     prsa, ...) and are exactly the surface BDO-AIO / Midnight already mods.
-     Excluding the whole p* namespace guarantees the two mods cannot fight.
-     NPCs (n*), monsters (m####) and everything else stay eligible.
+  2. Nothing a player character wears or is, is eligible BY DEFAULT.
+     Playable-class assets under character/texture/ are named with a class
+     prefix (phw, pew, pkww, prsa, ...) and are exactly the surface BDO-AIO /
+     Midnight already mods. Excluding the whole p* namespace guarantees the
+     two mods cannot fight. include_player_textures=True opts that namespace
+     back in (GPT/texconv player-texture mode); the stage-time collision
+     guard still means BDO-AIO layers win every path they claim. NPCs (n*),
+     monsters (m####) and everything else stay eligible.
 """
 from __future__ import annotations
 
@@ -141,7 +144,8 @@ def is_lod_or_billboard(path: str) -> tuple[bool, str]:
     return False, ""
 
 
-def classify(path: str, *, include_lod_billboards: bool = False) -> tuple[bool, str]:
+def classify(path: str, *, include_lod_billboards: bool = False,
+             include_player_textures: bool = False) -> tuple[bool, str]:
     """Return (eligible, reason). `path` is a forward-slash archive path.
 
     The reason is returned for rejects *and* accepts so a scan report can
@@ -150,6 +154,10 @@ def classify(path: str, *, include_lod_billboards: bool = False) -> tuple[bool, 
     include_lod_billboards: default False. When True, SpeedTree billboards and
     mesh LOD colour maps under allowlisted roots may pass (high/experimental).
     mapdata HLOD roots stay out of scope either way.
+
+    include_player_textures: default False. When True, playable-class p*
+    textures under character/texture/ are eligible (opt-in GPT/player mode).
+    OFF by default — BDO-AIO owns that namespace.
     """
     p = path.lower().replace("\\", "/")
     name = _basename(p)
@@ -177,6 +185,8 @@ def classify(path: str, *, include_lod_billboards: bool = False) -> tuple[bool, 
 
     if root == "character/texture/" and PLAYER_PREFIX_RE.match(tokens[0]):
         owned = " (BDO-AIO owns this)" if tokens[0] in KNOWN_PLAYER_PREFIXES else ""
+        if include_player_textures:
+            return True, f"player-opt-in({tokens[0]}){owned}"
         return False, f"playable-class({tokens[0]}){owned}"
 
     if is_dist and include_lod_billboards:
@@ -185,8 +195,10 @@ def classify(path: str, *, include_lod_billboards: bool = False) -> tuple[bool, 
     return True, f"eligible:{root.rstrip('/')}"
 
 
-def is_eligible(path: str, *, include_lod_billboards: bool = False) -> bool:
-    return classify(path, include_lod_billboards=include_lod_billboards)[0]
+def is_eligible(path: str, *, include_lod_billboards: bool = False,
+                include_player_textures: bool = False) -> bool:
+    return classify(path, include_lod_billboards=include_lod_billboards,
+                    include_player_textures=include_player_textures)[0]
 
 
 # --------------------------------------------------------------------------

@@ -19,6 +19,7 @@
   "upscaylTile": 0,
   "upscaylThreads": "2:4:2",
   "includeLodBillboards": false,
+  "includePlayerTextures": false,
   "materialsEnabled": true,
   "materialsCompanionKinds": [
     "n",
