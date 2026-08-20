@@ -29,5 +29,22 @@
     "w",
     "ao"
   ],
-  "bdoAioFilesToPatch": ""
+  "bdoAioFilesToPatch": "",
+  "bodiesEnabled": false,
+  "bdoAioRoot": "C:\\Users\\karlo\\Documents\\Apps\\BDO-AIO",
+  "gamePaz": "",
+  "bodyWorkDir": "work_body",
+  "exportDir": "export",
+  "skinAlbedoTarget": 4096,
+  "otherAlbedoTarget": 2048,
+  "materialMaxEdge": 4096,
+  "minAlbedoEdge": 256,
+  "allowPackFallback": false,
+  "texconv": "",
+  "sourceGlobs": [
+    "tools/genital_packs/texture/**/*.dds",
+    "pack/midnight_xyzw/_00_suzu_nude/character/texture/**/*nude*.dds",
+    "pack/midnight_xyzw/_00_thegreatsage_nude/**/*.dds"
+  ],
+  "stageLayerName": "_bdo_aio_bodymats"
 }

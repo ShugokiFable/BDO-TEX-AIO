@@ -13,7 +13,7 @@ param()
 $ErrorActionPreference = 'Stop'
 $AppRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Cli     = Join-Path $AppRoot 'tools\bdo_tex.py'
-$Version = '1.4.0'
+$Version = '1.5.0'
 
 function Resolve-Python {
     foreach ($c in @('python', 'py')) {
@@ -192,7 +192,7 @@ function Show-Menu {
     Clear-Host
     Write-Host '==================================================' -ForegroundColor Cyan
     Write-Host ('  BDO Texture AIO  v{0}' -f $Version) -ForegroundColor Cyan
-    Write-Host '  World first - player/GPT textures opt-in; BDO-AIO choices always win' -ForegroundColor DarkGray
+    Write-Host '  World first - player/GPT textures opt-in; bodies/AIO choices always win' -ForegroundColor DarkGray
     Write-Host '==================================================' -ForegroundColor Cyan
     Write-Host ''
     $roots = @($cfg.roots)
@@ -224,6 +224,10 @@ function Show-Menu {
     if ($null -ne $cfg.includePlayerTextures) { $playerOn = [bool]$cfg.includePlayerTextures }
     $playerLabel = if ($playerOn) { 'ON (BDO-AIO territory - opt-in)' } else { 'OFF (default)' }
     Write-Host ('  player/GPT textures: {0}' -f $playerLabel) -ForegroundColor $(if ($playerOn) { 'Yellow' } else { 'DarkGray' })
+    $bodiesOn = $false
+    if ($null -ne $cfg.bodiesEnabled) { $bodiesOn = [bool]$cfg.bodiesEnabled }
+    $bodiesLabel = if ($bodiesOn) { 'ON (enhances AIO choices)' } else { 'OFF (default)' }
+    Write-Host ('  bodies: {0}' -f $bodiesLabel) -ForegroundColor $(if ($bodiesOn) { 'Yellow' } else { 'DarkGray' })
     Write-Host ''
     Write-Host '  [1] Scan game textures        (build the candidate list)'
     Write-Host '  [2] Extract to PNG'
@@ -244,6 +248,8 @@ function Show-Menu {
     Write-Host '  [G] Toggle player/GPT textures (playable p* - opt-in)' -ForegroundColor Yellow
     Write-Host '  [L] Toggle LOD/billboards     (distance art - OFF by default)' -ForegroundColor Yellow
     Write-Host '  [N] Toggle companion-map matching' -ForegroundColor Yellow
+    Write-Host '  [X] Toggle bodies (BDO-AIO choice enhancement - OFF by default)' -ForegroundColor Yellow
+    Write-Host '  [Y] Run bodies pipeline: scan -> process -> stage (needs AIO deploy first)' -ForegroundColor Yellow
     Write-Host '  [S] Status'
     Write-Host '  [V] Verify (run the self-checks)'
     Write-Host '  [R] Remove this app staged layer'
@@ -303,6 +309,43 @@ function Toggle-CharacterRoots {
     $cfg.roots = @($list.ToArray())
     Save-Config $cfg
     Write-Host '  Re-run [1] Scan so the candidate list matches.' -ForegroundColor Yellow
+}
+
+function Toggle-Bodies {
+    $cfg = Get-Config
+    $cur = $false
+    if ($null -ne $cfg.bodiesEnabled) { $cur = [bool]$cfg.bodiesEnabled }
+    $cfg.bodiesEnabled = -not $cur
+    Save-Config $cfg
+    if ($cfg.bodiesEnabled) {
+        Write-Host '  bodies: ON (enhances bodies/pubes YOU chose in BDO-AIO)' -ForegroundColor Yellow
+        Write-Host '  Press [Y] after BDO-AIO deploy: scan -> process -> stage' -ForegroundColor DarkGray
+    } else {
+        Write-Host '  bodies: OFF (default - world textures only)' -ForegroundColor Green
+    }
+}
+
+function Invoke-Bodies {
+    $cfg = Get-Config
+    $on = $false
+    if ($null -ne $cfg.bodiesEnabled) { $on = [bool]$cfg.bodiesEnabled }
+    if (-not $on) {
+        Write-Host '  bodies are OFF - press [X] first.' -ForegroundColor Yellow
+        return
+    }
+    $bodyCli = Join-Path $AppRoot 'tools\body_mats.py'
+    if (-not (Test-Path $bodyCli)) {
+        Write-Host '  tools\body_mats.py missing.' -ForegroundColor Red
+        return
+    }
+    $env:PYTHONIOENCODING = 'utf-8'
+    foreach ($step in @('scan', 'process', 'stage')) {
+        & $script:Python $bodyCli $step
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host ('  bodies {0} failed - stopping.' -f $step) -ForegroundColor Red
+            return
+        }
+    }
 }
 
 function Toggle-PlayerTextures {
@@ -409,6 +452,8 @@ while ($true) {
         'G' { Toggle-PlayerTextures }
         'L' { Toggle-LodBillboards }
         'N' { Toggle-Materials }
+        'X' { Toggle-Bodies }
+        'Y' { Invoke-Bodies }
         'S' { Invoke-Cli @('status') }
         'V' {
             $env:PYTHONIOENCODING = 'utf-8'

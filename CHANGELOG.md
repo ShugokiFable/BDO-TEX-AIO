@@ -3,6 +3,32 @@
 All notable changes to BDO-TEX-AIO. Format: Keep a Changelog, versions
 semantic. Release zips on GitHub always match the tagged commit.
 
+## [1.5.0] - 2026-08-19
+
+### Added
+- **Bodies mode (opt-in)** — merges the BDO-AIO-BodyMats addon into this
+  tool; the separate app is retired:
+  - `[X]` menu toggle (persisted as `bodiesEnabled`, default **false**)
+  - `[Y]` runs the bodies pipeline: scan AIO winners in `files_to_patch`
+    (layer priority `_pubic_hair_` > `_genital_` > `_midnight_`) →
+    process (skin albedo → 4096, others → 2048, resize existing
+    `_n`/`_sp`/`_m`/… companions only) → stage to `_bdo_aio_bodymats`
+  - Same safety rails as the world path: RGB-only upscale with alpha
+    re-attach, blank-output check + LANCZOS fallback, no invented maps,
+    never writes into the BDO-AIO install folder
+  - `tools\body_mats.py` (scan/process/stage/status) now reads the unified
+    `config.json` — falls back to TEX keys (`gameDir`, `bdoAioFilesToPatch`,
+    `model`) when its own keys are absent
+  - New config keys: `bodiesEnabled`, `bdoAioRoot`, `gamePaz`, `bodyWorkDir`
+    (default `work_body`), `exportDir`, `skinAlbedoTarget`, `otherAlbedoTarget`,
+    `materialMaxEdge`, `minAlbedoEdge`, `allowPackFallback`, `sourceGlobs`,
+    `texconv`, `stageLayerName`
+
+### Changed
+- README / WORKFLOW updated: one app, run order now
+  BDO-AIO → TEX ([Y] bodies, world) → PartCutGen → Meta Injector.
+- `dds.py` confirmed byte-identical between the two tools before merging.
+
 ## [1.4.0] - 2026-08-19
 
 ### Added

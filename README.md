@@ -1,31 +1,31 @@
 # BDO Texture AIO
 
-AI upscaling for Black Desert Online **world** textures — landscape, buildings,
-props, NPCs, monsters, mounts (optional). Stages results for Meta Injector.
-An opt-in mode (`[G]`) adds **playable-class (player)** textures for a GPT /
-external upscaler pass. Double-click **`START.bat`**.
+AI upscaling for Black Desert Online — **world** textures by default (landscape,
+buildings, props, NPCs, monsters, mounts optional), with an opt-in **bodies**
+mode (`[X]`/`[Y]`) that enhances the bodies/pubes you already chose in BDO-AIO,
+and an opt-in **player/GPT** mode (`[G]`) for playable-class `p*` textures via an
+external upscaler pass. Stages results for Meta Injector. Double-click **`START.bat`**.
 
 ## Relationship to BDO-AIO (choices always win)
 
 | App | Owns |
 |-----|------|
 | **BDO-AIO** | Body / pube / genital / outfit **choices** |
-| **BDO-AIO-BodyMats** | Higher-res of those **same** chosen bodies |
-| **BDO-TEX-AIO** (this) | World / environment; optional NPC skins |
+| **BDO-TEX-AIO** (this) | World / environment; optional NPC skins; optional higher-res of the **same** chosen bodies |
 
 This tool:
 
 - **Never** includes playable-class `character/texture/p*` assets unless you
-  opt in (`[G]` / `includePlayerTextures` — for a GPT/texconv pass)  
-- **By default** skips LODs / SpeedTree **billboards** / impostors  
-  (optional high toggle `[L]` / `includeLodBillboards`)  
-
-- **Never** overwrites a path already present in `files_to_patch` (AIO, BodyMats, …)  
-- **Never** writes into the BDO-AIO install folder  
-- Writes only `files_to_patch\_bdo_tex_upscale\`
+  opt in (`[G]` / `includePlayerTextures` — for a GPT/texconv pass)
+- **By default** skips LODs / SpeedTree **billboards** / impostors
+  (optional high toggle `[L]` / `includeLodBillboards`)
+- **Never** overwrites a path already present in `files_to_patch` (AIO, bodies, …)
+- **Never** writes into the BDO-AIO install folder
+- Writes only `files_to_patch\_bdo_tex_upscale\` (world) and
+  `files_to_patch\_bdo_aio_bodymats\` (bodies mode)
 
 So after you pick bodies in BDO-AIO, TEX will not stomp those choices. Paths AIO
-(or BodyMats) already staged are **skipped** at stage time — even in player mode.
+(or the bodies layer) already staged are **skipped** at stage time — even in player mode.
 
 ## GPT / player-texture mode (opt-in)
 
@@ -47,14 +47,35 @@ for a GPT / external upscaler pass:
   no manual format matching; the GPT PNG just needs to be ≥ the source size.
 - Same folder flow works with SwarmUI / ComfyUI (`swarm-export`, `--source swarm`).
 
+## Bodies mode (opt-in, replaces BDO-AIO-BodyMats)
+
+BDO-AIO owns which bodies/pubes/outfits you use. **Bodies mode** only upscales
+the winner files AIO already staged into `files_to_patch` (layer priority:
+`_pubic_hair_` > `_genital_` > `_midnight_`), and resizes existing companion
+maps (`_n`/`_sp`/`_m`/…). It never invents maps and never writes into AIO's
+folders — the stage target is `files_to_patch\_bdo_aio_bodymats\`.
+
+```text
+[X] bodies on  ->  BDO-AIO must already be DEPLOYED
+[Y] scan -> process -> stage   (writes _bdo_aio_bodymats only)
+```
+
+- Nude skin albedos upscale toward **4096**; other albedos toward **2048**.
+- Only **existing** companion maps are resized — no invent (Meta Injector
+  rejects paths not in `pad00000.meta`).
+- Same safety rails as the world path: RGB-only upscale with alpha
+  re-attached, blank-output check with LANCZOS fallback, DDS via bundled
+  `dds.py` (no texconv needed).
+- The old **BDO-AIO-BodyMats** app is merged into this tool (v1.5.0); run
+  `python tools\body_mats.py status` for the same read-only view.
+
 ## Recommended run order
 
 ```text
 1. BDO-AIO          pick + DEPLOY bodies/pubes/outfits
-2. BodyMats         optional - enhance those bodies only
-3. BDO-TEX-AIO      this app - world textures
-4. PartCutGen       if you use it
-5. Meta Injector    once on the game Paz folder
+2. BDO-TEX-AIO      this app - [Y] bodies (optional), then world textures
+3. PartCutGen       if you use it
+4. Meta Injector    once on the game Paz folder
 ```
 
 TEX can be processed anytime (scan/upscale are self-contained under `work\`),
@@ -136,6 +157,8 @@ lands in the 1.4–2.2 img/s band on this GPU.
 | `7` | Full pipeline |
 | `C` | Toggle character/texture (NPC/monster; not player classes) |
 | `G` | Toggle player/GPT textures (playable `p*`; opt-in) |
+| `X` | Toggle bodies (enhance BDO-AIO choices; **OFF** default) |
+| `Y` | Run bodies pipeline: scan → process → stage (after AIO deploy) |
 | `L` | Toggle LOD/billboards (**OFF** default; high option, low ROI) |
 | `N` | Toggle companion-map matching |
 | `P` / `T` / `M` | Preset / target / model |
@@ -152,12 +175,16 @@ lands in the 1.4–2.2 img/s band on this GPU.
 pip install pillow numpy
 python tools\bdo_tex.py status
 python tools\bdo_tex.py scan
+python tools\body_mats.py status
 ```
 
 ## Config
 
 First run copies `config.example.json` → `config.json`. Set `gameDir` to your
 Black Desert install. Keep `workDir` as `"work"` (stays next to the app).
+Bodies mode keys: `bodiesEnabled` (menu `[X]`), `bdoAioRoot`,
+`skinAlbedoTarget` (4096), `otherAlbedoTarget` (2048), `allowPackFallback`
+(false), `stageLayerName` (`_bdo_aio_bodymats`), `bodyWorkDir` (`work_body`).
 
 ## Safety summary
 

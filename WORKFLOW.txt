@@ -2,35 +2,38 @@ BDO tools - recommended run order
 =================================
 
 Authority: BDO-AIO owns body / pube / genital / outfit CHOICES.
-           BodyMats and TEX only enhance; they never re-pick those options.
+           TEX only enhances; it never re-picks those options.
 
   1. BDO-AIO
        Pick bodies, pubes, genital, outfit edits.
        DEPLOY -> game Paz\files_to_patch\_pubic_hair_* / _genital_* / _midnight_* / ...
 
-  2. BDO-AIO-BodyMats   (optional)
-       Scan the AIO winners in files_to_patch.
-       Upscale undersized skins; resize existing companion maps only.
-       Stage -> files_to_patch\_bdo_aio_bodymats
-       (same paths as your choices, better pixels - not different bodies)
+  2. BDO-TEX-AIO   (this app)
+       Bodies (optional, [X] then [Y]):
+         Scan the AIO winners in files_to_patch.
+         Upscale undersized skins (4096) / others (2048); resize existing
+         companion maps only.
+         Stage -> files_to_patch\_bdo_aio_bodymats
+         (same paths as your choices, better pixels - not different bodies)
 
-  3. BDO-TEX-AIO   (optional)
-       World / environment upscale.
-       Player-class p* excluded unless GPT/player mode [G] is on (opt-in).
-       Stage -> files_to_patch\_bdo_tex_upscale
-       Any path already claimed by AIO or BodyMats is SKIPPED.
-       GPT mode: [A] export -> GPT upscale -> [B] pack --source gpt -> [6] stage
+       World (default):
+         World / environment upscale.
+         Player-class p* excluded unless GPT/player mode [G] is on (opt-in).
+         Stage -> files_to_patch\_bdo_tex_upscale
+         Any path already claimed by AIO or bodies is SKIPPED.
+         GPT mode: [A] export -> GPT upscale -> [B] pack --source gpt -> [6] stage
 
-  4. PartCutGen   (if you use it from BDO-AIO)
+  3. PartCutGen   (if you use it from BDO-AIO)
 
-  5. Meta Injector   once on the game Paz folder
+  4. Meta Injector   once on the game Paz folder
        Applies the whole files_to_patch tree.
 
 Notes
 -----
 - Meta Injector can only patch paths that exist in pad00000.meta.
   Inventing a brand-new foo_n.dds fails inject (soft-bind test confirmed).
-- Do not run BodyMats before AIO deploy: pack fallback is off by default
+- Do not run bodies mode before AIO deploy: pack fallback is off by default
   so you will not accidentally enhance bodies you did not choose.
 - TEX work/ cache is under BDO-TEX-AIO\work (shareable SSD folder).
-- BDO-AIO install folder is never written by BodyMats or TEX.
+  Bodies work/ cache is under BDO-TEX-AIO\work_body.
+- BDO-AIO install folder is never written by TEX.
